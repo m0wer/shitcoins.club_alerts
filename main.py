@@ -67,6 +67,9 @@ RETRY_WAIT: int = 10
 # Time to wait between requests
 REQUEST_WAIT: int = 10
 
+# Disable sending the messages to the telegram channel (just record the prices)
+DISABLE_SEND: bool = os.environ.get("DISABLE_SEND", False)
+
 
 class Currency(BaseModel):
     name: str
@@ -262,6 +265,9 @@ async def main():
             )
         message = f"{price.crypto_currency.name} en {price.fiat_currency.name} a {price.buy:.2f}€ ({comission.buy if comission else 'NA'}%)/{price.sell:.2f}€ ({comission.sell if comission else 'NA'} %)"
         logger.info(message)
+
+        if DISABLE_SEND:
+            continue
 
         # notify the channel if the comission change since last record in the csv is
         # above the threshold
