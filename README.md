@@ -7,7 +7,7 @@ Script that parses the prices of https://shitcoins.club/, saves them in a csv fi
 ```bash
 docker run \
   -e TG_TOKEN=something \
-  -e TG_CHAT_ID=@your_channel_or_chat_id \
+  -e TG_CHANNEL_ID=@your_channel_or_chat_id \
   -v /path/to/your/data:/data \
   -it \
   --rm \
