@@ -1,7 +1,9 @@
 FROM python:3.11-slim
 
+VOLUME /data
+
 COPY . /app
 WORKDIR /app
-RUN pip install -e .
+RUN pip install tenacity aiogram aiohttp beautifulsoup4 pydantic pandas plotly kaleido
 
 CMD ["python", "main.py"]
