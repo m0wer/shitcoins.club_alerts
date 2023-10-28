@@ -34,7 +34,7 @@ from bs4 import BeautifulSoup
 from tenacity import retry, stop_after_attempt, wait_fixed
 from pydantic import BaseModel
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
 # Telegram bot token
@@ -234,6 +234,9 @@ async def main():
     previous_comissions: dict[str, Comission | None] = {}
     with open(CSV_PATH, "r") as f:
         for line in f.readlines():
+            # skip header line
+            if line.startswith("crypto_currency"):
+                continue
             (
                 crypto_currency,
                 fiat_currency,
@@ -243,10 +246,13 @@ async def main():
                 comission_buy,
                 comission_sell,
             ) = line.strip().split(",")
-            if datetime.fromisoformat(time) > (datetime.now() - timedelta(days=2)):
+            if datetime.fromisoformat(time) < (datetime.now() - timedelta(days=2)):
+                logger.debug("too old")
                 continue
-            if datetime.fromisoformat(time) < (datetime.now() - timedelta(days=1)):
+            if datetime.fromisoformat(time) > (datetime.now() - timedelta(days=1)):
+                logger.debug("too new")
                 break
+            logger.debug(line)
             try:
                 previous_comissions[crypto_currency] = Comission(
                     buy=float(comission_buy), sell=float(comission_sell)
