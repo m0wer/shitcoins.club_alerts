@@ -16,8 +16,21 @@ import pandas as pd
 CSV_PATH: str = os.environ.get("CSV_PATH", "/data/price.csv")
 
 # Read the CSV
-df = pd.read_csv(CSV_PATH)
+df = (
+    pd.read_csv(CSV_PATH, parse_dates=["time"], index_col="time")
+    .sort_values(by=["time"])
+)
 
 # Plot the buy and sell comission graphs
-fig = px.line(df, x="time", y=["comission_buy", "comission_sell"], title="Comissions", color="crypto_currency")
+fig = px.line(
+    df,
+    y=["comission_buy", "comission_sell"],
+    title="Crypto ATM Comissions",
+    color="crypto_currency",
+    labels={
+        "time": "Time",
+        "value": "Comission (%)",
+    },
+    line_shape="spline",
+)
 fig.show()

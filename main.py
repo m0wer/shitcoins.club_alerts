@@ -218,7 +218,12 @@ def get_plot(crypto_currency: str | None = None, n_days: int = 30):
         df,
         x="time",
         y=["comission_buy", "comission_sell"],
-        title=f"Comissions {crypto_currency if crypto_currency else ''}",
+        title=f"Crypto ATM Comissions {crypto_currency if crypto_currency else ''}",
+        labels={
+            "time": "Time",
+            "value": "Comission (%)",
+        },
+        line_shape="spline",
     )
     return fig
 
