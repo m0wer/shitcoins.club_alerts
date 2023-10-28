@@ -225,11 +225,10 @@ def get_plot(crypto_currency: str | None = None, n_days: int = 30):
 
 async def main():
     prices = await get_prices()
-    # mapping of crypto_currency to previous comission
+    # mapping of crypto_currency to previous comission (24h ago)
     previous_comissions: dict[str, Comission | None] = {}
     with open(CSV_PATH, "r") as f:
-        # read the last len(prices) lines
-        for line in f.readlines()[-len(prices) :]:
+        for line in f.readlines():
             (
                 crypto_currency,
                 fiat_currency,
@@ -239,6 +238,10 @@ async def main():
                 comission_buy,
                 comission_sell,
             ) = line.strip().split(",")
+            if datetime.fromisoformat(time) > (datetime.now() - timedelta(days=2)):
+                continue
+            if datetime.fromisoformat(time) < (datetime.now() - timedelta(days=1)):
+                break
             try:
                 previous_comissions[crypto_currency] = Comission(
                     buy=float(comission_buy), sell=float(comission_sell)
