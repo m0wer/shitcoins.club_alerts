@@ -223,7 +223,7 @@ def get_plot(crypto_currency: str | None = None, n_days: int = 30):
             "time": "Time",
             "value": "Comission (%)",
         },
-        line_shape="spline",
+        line_shape="linear",
     )
     return fig
 

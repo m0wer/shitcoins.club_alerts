@@ -31,6 +31,6 @@ fig = px.line(
         "time": "Time",
         "value": "Comission (%)",
     },
-    line_shape="spline",
+    line_shape="linear",
 )
 fig.show()
