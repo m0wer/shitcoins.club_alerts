@@ -297,7 +297,7 @@ async def main():
                 )
             )
         ):
-            fig = get_plot(price.crypto_currency.name)
+            fig = get_plot(price.crypto_currency.name, 90)
             bot = Bot(token=TG_TOKEN)
             # write the image to a random temporary file
             fig.write_image("/tmp/plot.png")
