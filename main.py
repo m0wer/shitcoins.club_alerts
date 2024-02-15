@@ -91,10 +91,10 @@ CRYPTO_CURRENCIES: list[CryptoCurrency] = [
     CryptoCurrency(name="BTC"),
     CryptoCurrency(name="ETH"),
     CryptoCurrency(name="USDT"),
-    CryptoCurrency(name="USDC"),
-    CryptoCurrency(name="LTC"),
-    CryptoCurrency(name="TRX"),
-    CryptoCurrency(name="DASH"),
+    #CryptoCurrency(name="USDC"),
+    #CryptoCurrency(name="LTC"),
+    #CryptoCurrency(name="TRX"),
+    #CryptoCurrency(name="DASH"),
 ]
 
 # mapping from currency to the api url for the eur spot price and a bool indicating
@@ -112,18 +112,18 @@ SPOT_URL: dict[str, tuple[str, bool]] = {
         "https://api.binance.com/api/v1/ticker/price?symbol=EURUSDT",
         False,
     ),
-    "USDC": (
-        "https://api.binance.com/api/v1/ticker/price?symbol=EURUSDT",
-        False,
-    ),
-    "LTC": (
-        "https://api.binance.com/api/v1/ticker/price?symbol=LTCEUR",
-        True,
-    ),
-    "TRX": (
-        "https://api.binance.com/api/v1/ticker/price?symbol=TRXEUR",
-        True,
-    ),
+    #"USDC": (
+    #    "https://api.binance.com/api/v1/ticker/price?symbol=EURUSDT",
+    #    False,
+    #),
+    #"LTC": (
+    #    "https://api.binance.com/api/v1/ticker/price?symbol=LTCEUR",
+    #    True,
+    #),
+    #"TRX": (
+    #    "https://api.binance.com/api/v1/ticker/price?symbol=TRXEUR",
+    #    True,
+    #),
 }
 
 
