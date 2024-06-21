@@ -168,7 +168,7 @@ class Price(BaseModel):
                 )
 
 
-def get_prices() -> list:
+async def get_prices() -> list:
     """Get the prices from the website.
 
     The response is a JSON object
