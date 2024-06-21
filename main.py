@@ -33,6 +33,7 @@ from aiogram.types import FSInputFile
 from bs4 import BeautifulSoup
 from tenacity import retry, stop_after_attempt, wait_fixed
 from pydantic import BaseModel
+import cloudscraper
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
@@ -50,7 +51,7 @@ THRESHOLD: float = float(os.environ.get("THRESHOLD", 2.5))
 CSV_PATH: str = os.environ.get("CSV_PATH", "/data/price.csv")
 
 # URL to parse
-URL: str = "https://shitcoins.club/getRatesUpdates"
+URL: str = "https://shitcoins.club/getRates"
 
 # Timeout for the requests
 TIMEOUT: int = 10
@@ -167,40 +168,39 @@ class Price(BaseModel):
                 )
 
 
-async def get_prices() -> list:
+def get_prices() -> list:
     """Get the prices from the website.
 
-    The response is a text/event-stream
+    The response is a JSON object
 
     Returns:
         list: list of dicts with the prices
     """
-    async with aiohttp.ClientSession() as session:
-        async with session.get(URL) as response:
-            if response.status != 200:
-                logger.error("Error getting prices")
-                return []
-            prices = []
-            async for line in response.content:
-                line = line.decode("utf-8").strip()
-                if line.startswith("data:"):
-                    data = line.replace("data:", "")
-                    for e in json.loads(data):
-                        if e.get("toCurrency") == "EUR":
-                            prices.append(
-                                Price(
-                                    crypto_currency=CryptoCurrency(
-                                        name=e.get("fromCurrency")
-                                    ),
-                                    fiat_currency=FiatCurrency(
-                                        name=e.get("toCurrency")
-                                    ),
-                                    buy=e.get("rateBid"),
-                                    sell=e.get("rateAsk"),
-                                    time=datetime.now(),
-                                )
-                            )
-                    break
+    scraper = cloudscraper.create_scraper()
+    
+    response = scraper.get(URL)
+    if response.status_code != 200:
+        logger.error("Error getting prices")
+        return []
+    
+    prices = []
+    data = response.json()
+    for e in data:
+        if e.get("toCurrency") == "EUR":
+            prices.append(
+                Price(
+                    crypto_currency=CryptoCurrency(
+                        name=e.get("fromCurrency")['name']
+                    ),
+                    fiat_currency=FiatCurrency(
+                        name=e.get("toCurrency")
+                    ),
+                    buy=e.get("rateBid"),
+                    sell=e.get("rateAsk"),
+                    time=datetime.now(),
+                )
+            )
+    
     return prices
 
 
