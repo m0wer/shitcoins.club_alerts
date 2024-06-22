@@ -248,7 +248,6 @@ async def main():
                 comission_sell,
             ) = line.strip().split(",")
             if datetime.fromisoformat(time) < (datetime.now() - timedelta(days=2)):
-                logger.debug("too old")
                 continue
             if datetime.fromisoformat(time) > (datetime.now() - timedelta(days=1)):
                 logger.debug("too new")
@@ -300,10 +299,12 @@ async def main():
                 )
             )
         ):
+            logger.debug(f"Getting plot for {price.crypto_currency.name}")
             fig = get_plot(price.crypto_currency.name, 90)
             bot = Bot(token=TG_TOKEN)
             # write the image to a random temporary file
             fig.write_image("/tmp/plot.png")
+            logger.info(f"Sending message to telegram channel: {message}")
             await bot.send_photo(
                 chat_id=TG_CHANNEL_ID,
                 photo=FSInputFile("/tmp/plot.png"),
