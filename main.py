@@ -35,7 +35,7 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 from pydantic import BaseModel
 import cloudscraper
 
-logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
 # Telegram bot token
@@ -230,6 +230,7 @@ def get_plot(crypto_currency: str | None = None, n_days: int = 30):
 
 async def main():
     prices = await get_prices()
+    logger.debug(prices)
     # mapping of crypto_currency to previous comission (24h ago)
     previous_comissions: dict[str, Comission | None] = {}
     with open(CSV_PATH, "r") as f:
@@ -261,7 +262,9 @@ async def main():
                 previous_comissions[crypto_currency] = None
 
     for price in prices:
+        logger.info(f"Price: {price}")
         comission = await price.get_comission()
+        logger.info(f"Comission: {comission}")
         # save results to csv
         with open(CSV_PATH, "a") as f:
             # columns: crypto_currency,fiat_currency,buy,sell,time,comission_buy,comission_sell
