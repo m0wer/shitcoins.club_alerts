@@ -1,9 +1,9 @@
 """
 Script that parses the prices of https://shitcoins.club/, saves them in a csv
-file and sends notifications to a telegram channel when the comission is below a
+file and sends notifications to a telegram channel when the commission is below a
 certain threshold.
 
-Uses tenacity, aiogram, aiohttp and BeautifulSoup.
+Uses tenacity, aiogram, aiohttp, BeautifulSoup, pydantic, pandas, plotly, and kaleido.
 
 Install dependencies with:
 
@@ -44,11 +44,14 @@ TG_TOKEN: str = os.environ.get("TG_TOKEN")
 # Telegram channel id
 TG_CHANNEL_ID: str = os.environ.get("TG_CHANNEL_ID")
 
-# Threshold for the comission
+# Threshold for the commission
 THRESHOLD: float = float(os.environ.get("THRESHOLD", 2.5))
 
 # Path to the csv file
 CSV_PATH: str = os.environ.get("CSV_PATH", "/data/price.csv")
+
+# Path to the state file
+STATE_PATH: str = os.environ.get("STATE_PATH", "/data/state.json")
 
 # URL to parse
 URL: str = "https://shitcoins.club/getRates"
@@ -64,9 +67,6 @@ RETRY_COUNT: int = 3
 
 # Time to wait between retries
 RETRY_WAIT: int = 10
-
-# Time to wait between requests
-REQUEST_WAIT: int = 10
 
 # Disable sending the messages to the telegram channel (just record the prices)
 DISABLE_SEND: bool = os.environ.get("DISABLE_SEND", False)
@@ -92,10 +92,10 @@ CRYPTO_CURRENCIES: list[CryptoCurrency] = [
     CryptoCurrency(name="BTC"),
     CryptoCurrency(name="ETH"),
     CryptoCurrency(name="USDT"),
-    #CryptoCurrency(name="USDC"),
-    #CryptoCurrency(name="LTC"),
-    #CryptoCurrency(name="TRX"),
-    #CryptoCurrency(name="DASH"),
+    # CryptoCurrency(name="USDC"),
+    # CryptoCurrency(name="LTC"),
+    # CryptoCurrency(name="TRX"),
+    # CryptoCurrency(name="DASH"),
 ]
 
 # mapping from currency to the api url for the eur spot price and a bool indicating
@@ -113,22 +113,22 @@ SPOT_URL: dict[str, tuple[str, bool]] = {
         "https://api.binance.com/api/v1/ticker/price?symbol=EURUSDT",
         False,
     ),
-    #"USDC": (
+    # "USDC": (
     #    "https://api.binance.com/api/v1/ticker/price?symbol=EURUSDT",
     #    False,
-    #),
-    #"LTC": (
+    # ),
+    # "LTC": (
     #    "https://api.binance.com/api/v1/ticker/price?symbol=LTCEUR",
     #    True,
-    #),
-    #"TRX": (
+    # ),
+    # "TRX": (
     #    "https://api.binance.com/api/v1/ticker/price?symbol=TRXEUR",
     #    True,
-    #),
+    # ),
 }
 
 
-class Comission(BaseModel):
+class Commission(BaseModel):
     buy: float
     sell: float
 
@@ -140,11 +140,11 @@ class Price(BaseModel):
     sell: float
     time: datetime
 
-    async def get_comission(self) -> Comission | None:
-        """Get the comission for the price.
+    async def get_commission(self) -> Commission | None:
+        """Get the commission for the price.
 
         Returns:
-            Comission for the price or None if the price is not available
+            Commission for the price or None if the price is not available
         """
         if not self.crypto_currency.name.split("_")[0] in SPOT_URL:
             return None
@@ -163,11 +163,12 @@ class Price(BaseModel):
                 else:
                     buy = self.buy * spot_price
                     sell = self.sell * spot_price
-                return Comission(
+                return Commission(
                     buy=round((1 - buy) * 100, 2), sell=round(-(1 - sell) * 100)
                 )
 
 
+@retry(stop=stop_after_attempt(RETRY_COUNT), wait=wait_fixed(RETRY_WAIT))
 async def get_prices() -> list:
     """Get the prices from the website.
 
@@ -177,30 +178,26 @@ async def get_prices() -> list:
         list: list of dicts with the prices
     """
     scraper = cloudscraper.create_scraper()
-    
+
     response = scraper.get(URL)
     if response.status_code != 200:
         logger.error("Error getting prices")
-        return []
-    
+        raise Exception("Failed to get prices")
+
     prices = []
     data = response.json()
     for e in data:
         if e.get("toCurrency") == "EUR":
             prices.append(
                 Price(
-                    crypto_currency=CryptoCurrency(
-                        name=e.get("fromCurrency")['name']
-                    ),
-                    fiat_currency=FiatCurrency(
-                        name=e.get("toCurrency")
-                    ),
+                    crypto_currency=CryptoCurrency(name=e.get("fromCurrency")["name"]),
+                    fiat_currency=FiatCurrency(name=e.get("toCurrency")),
                     buy=e.get("rateBid"),
                     sell=e.get("rateAsk"),
                     time=datetime.now(),
                 )
             )
-    
+
     return prices
 
 
@@ -213,26 +210,42 @@ def get_plot(crypto_currency: str | None = None, n_days: int = 30):
     # Filter the last n_days
     df = df[df["time"] >= (datetime.now() - timedelta(days=n_days)).isoformat()]
 
-    # Plot the buy and sell comission graphs
+    # Plot the buy and sell commission graphs
     fig = px.line(
         df,
         x="time",
-        y=["comission_buy", "comission_sell"],
-        title=f"Crypto ATM Comissions {crypto_currency if crypto_currency else ''}",
+        y=["commission_buy", "commission_sell"],
+        title=f"Crypto ATM Commissions {crypto_currency if crypto_currency else ''}",
         labels={
             "time": "Time",
-            "value": "Comission (%)",
+            "value": "Commission (%)",
         },
         line_shape="linear",
     )
     return fig
 
 
+def load_state():
+    """Load the state from the state file."""
+    if os.path.exists(STATE_PATH):
+        with open(STATE_PATH, "r") as f:
+            return json.load(f)
+    return {}
+
+
+def save_state(state):
+    """Save the state to the state file."""
+    with open(STATE_PATH, "w") as f:
+        json.dump(state, f)
+
+
 async def main():
+    state = load_state()
+    logger.debug(state)
     prices = await get_prices()
     logger.debug(prices)
-    # mapping of crypto_currency to previous comission (24h ago)
-    previous_comissions: dict[str, Comission | None] = {}
+    # mapping of crypto_currency to previous commission (24h ago)
+    previous_commissions: dict[str, Commission | None] = {}
     with open(CSV_PATH, "r") as f:
         for line in f.readlines():
             # skip header line
@@ -244,8 +257,8 @@ async def main():
                 buy,
                 sell,
                 time,
-                comission_buy,
-                comission_sell,
+                commission_buy,
+                commission_sell,
             ) = line.strip().split(",")
             if datetime.fromisoformat(time) < (datetime.now() - timedelta(days=2)):
                 continue
@@ -254,19 +267,19 @@ async def main():
                 break
             logger.debug(line)
             try:
-                previous_comissions[crypto_currency] = Comission(
-                    buy=float(comission_buy), sell=float(comission_sell)
+                previous_commissions[crypto_currency] = Commission(
+                    buy=float(commission_buy), sell=float(commission_sell)
                 )
             except ValueError:
-                previous_comissions[crypto_currency] = None
+                previous_commissions[crypto_currency] = None
 
     for price in prices:
         logger.info(f"Price: {price}")
-        comission = await price.get_comission()
-        logger.info(f"Comission: {comission}")
+        commission = await price.get_commission()
+        logger.info(f"Commission: {commission}")
         # save results to csv
         with open(CSV_PATH, "a") as f:
-            # columns: crypto_currency,fiat_currency,buy,sell,time,comission_buy,comission_sell
+            # columns: crypto_currency,fiat_currency,buy,sell,time,commission_buy,commission_sell
             writer = csv.writer(f)
             writer.writerow(
                 [
@@ -275,28 +288,36 @@ async def main():
                     price.buy,
                     price.sell,
                     price.time.isoformat(),
-                    comission.buy if comission else None,
-                    comission.sell if comission else None,
+                    commission.buy if commission else None,
+                    commission.sell if commission else None,
                 ]
             )
-        message = f"{price.crypto_currency.name} en {price.fiat_currency.name} a {price.buy:.2f}€ ({comission.buy if comission else 'NA'}%)/{price.sell:.2f}€ ({comission.sell if comission else 'NA'} %)"
+        message = f"{price.crypto_currency.name} en {price.fiat_currency.name} a {price.buy:.2f}€ ({commission.buy if commission else 'NA'}%)/{price.sell:.2f}€ ({commission.sell if commission else 'NA'} %)"
         logger.info(message)
 
         if DISABLE_SEND:
             continue
 
-        # notify the channel if the comission change since last record in the csv is
-        # above the threshold
+        last_notification_time = state.get(price.crypto_currency.name)
         if (
-            comission
-            and previous_comissions.get(price.crypto_currency.name)
+            commission
+            and previous_commissions.get(price.crypto_currency.name)
             and (
-                abs(comission.buy - previous_comissions[price.crypto_currency.name].buy)
+                abs(
+                    commission.buy
+                    - previous_commissions[price.crypto_currency.name].buy
+                )
                 >= THRESHOLD
                 or abs(
-                    comission.sell
-                    - previous_comissions[price.crypto_currency.name].sell
+                    commission.sell
+                    - previous_commissions[price.crypto_currency.name].sell
                 )
+                >= THRESHOLD
+            )
+            and (
+                not last_notification_time
+                or datetime.fromisoformat(last_notification_time)
+                < datetime.now() - timedelta(hours=24)
             )
         ):
             logger.debug(f"Getting plot for {price.crypto_currency.name}")
@@ -313,6 +334,8 @@ async def main():
             logger.info(
                 f"Message sent to telegram channel: {price.crypto_currency.name}"
             )
+            state[price.crypto_currency.name] = datetime.now().isoformat()
+            save_state(state)
 
 
 if __name__ == "__main__":
