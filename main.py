@@ -204,11 +204,28 @@ async def get_prices() -> list:
 def get_plot(crypto_currency: str | None = None, n_days: int = 30):
     # Read the CSV
     df = pd.read_csv(CSV_PATH)
+
+    # Convert the 'time' column to datetime
+    df["time"] = pd.to_datetime(df["time"])
+
+    # Filter the DataFrame for the specified cryptocurrency
     if crypto_currency:
         df = df[df["crypto_currency"] == crypto_currency]
 
     # Filter the last n_days
-    df = df[df["time"] >= (datetime.now() - timedelta(days=n_days)).isoformat()]
+    cutoff_time = datetime.now() - timedelta(days=n_days)
+    df = df[df["time"] >= cutoff_time]
+
+    # Ensure 'commission_buy' and 'commission_sell' columns are not empty
+    if (
+        df.empty
+        or "commission_buy" not in df.columns
+        or "commission_sell" not in df.columns
+    ):
+        logger.error(
+            f"No data available for {crypto_currency} in the last {n_days} days."
+        )
+        return None
 
     # Plot the buy and sell commission graphs
     fig = px.line(
@@ -222,6 +239,7 @@ def get_plot(crypto_currency: str | None = None, n_days: int = 30):
         },
         line_shape="linear",
     )
+
     return fig
 
 
