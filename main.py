@@ -245,11 +245,25 @@ def get_plot(crypto_currency: str | None = None, n_days: int = 30):
         line_shape="linear",
     )
 
-    # Add horizontal lines for median values
-    fig.add_trace(go.Scatter(x=[df["time"].min(), df["time"].max()], y=[median_buy, median_buy],
-                             mode='lines', name='Median Buy', line=dict(color='rgba(255,0,0,0.5)', dash='dash')))
-    fig.add_trace(go.Scatter(x=[df["time"].min(), df["time"].max()], y=[median_sell, median_sell],
-                             mode='lines', name='Median Sell', line=dict(color='rgba(0,0,255,0.5)', dash='dash')))
+    # Add horizontal lines for median values with median values in the legend
+    fig.add_trace(
+        go.Scatter(
+            x=[df["time"].min(), df["time"].max()],
+            y=[median_buy, median_buy],
+            mode="lines",
+            name=f"Median Buy: {median_buy:.2f}%",
+            line=dict(color="rgba(255,0,0,0.5)", dash="dash"),
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=[df["time"].min(), df["time"].max()],
+            y=[median_sell, median_sell],
+            mode="lines",
+            name=f"Median Sell: {median_sell:.2f}%",
+            line=dict(color="rgba(0,0,255,0.5)", dash="dash"),
+        )
+    )
 
     return fig
 
