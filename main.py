@@ -19,6 +19,7 @@ Or a cron to run the docker container:
 """
 
 import plotly.express as px
+import plotly.graph_objects as go
 import pandas as pd
 import asyncio
 import csv
@@ -227,6 +228,10 @@ def get_plot(crypto_currency: str | None = None, n_days: int = 30):
         )
         return None
 
+    # Calculate median values
+    median_buy = df["commission_buy"].median()
+    median_sell = df["commission_sell"].median()
+
     # Plot the buy and sell commission graphs
     fig = px.line(
         df,
@@ -239,6 +244,12 @@ def get_plot(crypto_currency: str | None = None, n_days: int = 30):
         },
         line_shape="linear",
     )
+
+    # Add horizontal lines for median values
+    fig.add_trace(go.Scatter(x=[df["time"].min(), df["time"].max()], y=[median_buy, median_buy],
+                             mode='lines', name='Median Buy', line=dict(color='rgba(255,0,0,0.5)', dash='dash')))
+    fig.add_trace(go.Scatter(x=[df["time"].min(), df["time"].max()], y=[median_sell, median_sell],
+                             mode='lines', name='Median Sell', line=dict(color='rgba(0,0,255,0.5)', dash='dash')))
 
     return fig
 
