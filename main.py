@@ -232,17 +232,29 @@ def get_plot(crypto_currency: str | None = None, n_days: int = 30):
     median_buy = df["commission_buy"].median()
     median_sell = df["commission_sell"].median()
 
-    # Plot the buy and sell commission graphs
-    fig = px.line(
-        df,
-        x="time",
-        y=["commission_buy", "commission_sell"],
-        title=f"Crypto ATM Commissions {crypto_currency if crypto_currency else ''}",
-        labels={
-            "time": "Time",
-            "value": "Commission (%)",
-        },
-        line_shape="linear",
+    # Create the figure
+    fig = go.Figure()
+
+    # Add commission buy line
+    fig.add_trace(
+        go.Scatter(
+            x=df["time"],
+            y=df["commission_buy"],
+            mode="lines",
+            name=f'Buy (Last: {df["commission_buy"].iloc[-1]:.2f}%)',
+            line=dict(color="red"),
+        )
+    )
+
+    # Add commission sell line
+    fig.add_trace(
+        go.Scatter(
+            x=df["time"],
+            y=df["commission_sell"],
+            mode="lines",
+            name=f'Sell (Last: {df["commission_sell"].iloc[-1]:.2f}%)',
+            line=dict(color="blue"),
+        )
     )
 
     # Add horizontal lines for median values with median values in the legend
@@ -263,6 +275,14 @@ def get_plot(crypto_currency: str | None = None, n_days: int = 30):
             name=f"Median Sell: {median_sell:.2f}%",
             line=dict(color="rgba(0,0,255,0.5)", dash="dash"),
         )
+    )
+
+    # Update layout
+    fig.update_layout(
+        title=f"Crypto ATM Commissions {crypto_currency if crypto_currency else ''}",
+        xaxis_title="Time",
+        yaxis_title="Commission (%)",
+        legend_title="Commission Types",
     )
 
     return fig
